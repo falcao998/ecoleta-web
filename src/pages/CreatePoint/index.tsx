@@ -3,6 +3,7 @@ import {Link} from "react-router-dom";
 import {FiArrowLeft} from "react-icons/fi";
 import { Map, TileLayer, Marker } from "react-leaflet";
 import axios from "axios";
+import { LeafletMouseEvent } from "leaflet";
 import api from "../../services/api";
 
 import "./styles.css";
@@ -30,9 +31,20 @@ const CreatePoint = () => {
     const [ufs, setUfs] = useState<Uf[]>([]);
     const [cidades, setCidades] = useState<Cidade[]>([]);
 
+    const [initialPosition, setInitialPosition] = useState<[number, number]>([0,0]);
+
     const [selectedUf, setSelectedUf] = useState("0");
     const [selectedCidade, setSelectedCidade] = useState("0");
+    const [selectPosition, setSelectPosition] = useState<[number, number]>([0,0]);
 
+    useEffect(() => {
+        navigator.geolocation.getCurrentPosition(position => {
+            const {latitude, longitude} = position.coords;
+
+            setInitialPosition([latitude, longitude]);
+        });
+    },[]);
+    
     useEffect(() => {
         api.get("items")
         .then(response => {
@@ -53,7 +65,7 @@ const CreatePoint = () => {
         }
         axios.get(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${selectedUf}/municipios`)
         .then(response => {
-            setSelectedCidade(response.data);
+            setCidades(response.data);
         })
     },[selectedUf]);
 
@@ -63,6 +75,13 @@ const CreatePoint = () => {
 
     function handleSelectCidade(event: ChangeEvent<HTMLSelectElement>) {
         setSelectedCidade(event.target.value);
+    }
+
+    function handleMapClick(event: LeafletMouseEvent) {
+        setSelectPosition([
+            event.latlng.lat,
+            event.latlng.lng
+        ]);
     }
 
     return (
@@ -113,12 +132,12 @@ const CreatePoint = () => {
                         <span>Selecione um endereço no mapa</span>
                     </legend>
 
-                    <Map center={[-12.9415829,-38.4744777]} zoom={15}>
+                    <Map center={initialPosition} zoom={15} onClick={handleMapClick}>
                     <TileLayer
                         attribution='&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
-                    <Marker position={[-12.9415829,-38.4744777]} />
+                    <Marker position={selectPosition} />
                     </Map>
 
                     <div className="field-group">
